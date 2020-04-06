@@ -60,6 +60,12 @@ function buildPrefsWidget() {
     "value",
     Gio.SettingsBindFlags.DEFAULT
   );
+  this.settings.bind(
+    "disable-unredirect",
+    builder.get_object("disable-unredirect"),
+    "active",
+    Gio.SettingsBindFlags.DEFAULT
+  );
 
   mainGrid.show_all();
 

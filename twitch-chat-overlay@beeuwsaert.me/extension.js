@@ -1,4 +1,5 @@
 const Gio = imports.gi.Gio;
+const Meta = imports.gi.Meta;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const { TwitchIRC } = Me.imports.TwitchIRC;
@@ -24,9 +25,26 @@ class Extension {
 
     this._overlayedWindows = [];
     this._windowHandlerID = null;
+    this._unredirectHandlerID = null;
   }
 
   enable() {
+    if (this._settings.get_boolean("disable-unredirect")) {
+      Meta.disable_unredirect_for_display(global.display);
+    }
+    this._unredirectHandlerID = this._settings.connect(
+      "changed::disable-unredirect",
+      () => {
+        if (this._settings.get_boolean("disable-unredirect")) {
+          Meta.disable_unredirect_for_display(global.display);
+          log("Disable unredirect");
+        } else {
+          log("Enable unredirect");
+          Meta.enable_unredirect_for_display(global.display);
+        }
+      }
+    );
+
     this._twitchIRC.connect(() => {
       this._twitchIRC.authenticate();
       let leave = this._twitchIRC.join(
@@ -67,7 +85,10 @@ class Extension {
 
   _clearHandlers() {
     if (this._windowHandlerID) global.display.disconnect(this._windowHandlerID);
+    if (this._unredirectHandlerID)
+      this._settings.disconnect(this._windowHandlerID);
 
+    this._unredirectHandlerID = null;
     this._windowHandlerID = null;
   }
 
@@ -132,6 +153,7 @@ class Extension {
     this._overlayedWindows = [];
   }
   disable() {
+    Meta.enable_unredirect_for_display(global.display);
     this._twitchIRC.close();
     this._unoverlayWindows();
     this._clearHandlers();

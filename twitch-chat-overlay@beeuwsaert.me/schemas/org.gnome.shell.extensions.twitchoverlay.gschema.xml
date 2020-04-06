@@ -16,5 +16,8 @@
     <key name="scrollback" type="d">
       <default>25</default>
     </key>
+    <key name="disable-unredirect" type="b">
+      <default>false</default>
+    </key>
   </schema>
 </schemalist>
