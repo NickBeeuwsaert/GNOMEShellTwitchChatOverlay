@@ -5,6 +5,7 @@ const Gtk = imports.gi.Gtk;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
+const { throttle } = Me.imports.throttle;
 
 function init() {}
 
@@ -42,12 +43,16 @@ function buildPrefsWidget() {
   );
 
   // Right now these fire too quicky, need to find a way to debounce them
-  this.settings.bind(
-    "twitch-channel",
-    builder.get_object("twitch-channel"),
-    "text",
-    Gio.SettingsBindFlags.DEFAULT
+  const twitchChannelEntry = builder.get_object("twitch-channel");
+
+  // Wait for the user to stop typing to update the twitch-channel setting
+  twitchChannelEntry.connect(
+    "notify::text",
+    throttle(() => {
+      this.settings.set_string("twitch-channel", twitchChannelEntry.get_text());
+    }, 5000)
   );
+
   this.settings.bind(
     "window-regex",
     builder.get_object("window-regex"),
