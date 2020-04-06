@@ -1,5 +1,5 @@
 const Clutter = imports.gi.Clutter;
-
+var CHAT_ACTOR_NAME = "twitchOverlay";
 var Chat = class Chat {
   constructor({
     parent,
@@ -15,6 +15,7 @@ var Chat = class Chat {
     this._actors = [];
     this.scrollback = scrollback;
     this.container = new Clutter.Actor({
+      name: CHAT_ACTOR_NAME,
       x: 0,
       y: 0,
       width: parent.width,

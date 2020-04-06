@@ -3,7 +3,7 @@ const Meta = imports.gi.Meta;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const { TwitchIRC } = Me.imports.TwitchIRC;
-const { Chat } = Me.imports.Chat;
+const { Chat, CHAT_ACTOR_NAME } = Me.imports.Chat;
 
 /* exported init */
 
@@ -23,7 +23,6 @@ class Extension {
       ),
     });
 
-    this._overlayedWindows = [];
     this._windowHandlerID = null;
     this._unredirectHandlerID = null;
   }
@@ -84,12 +83,14 @@ class Extension {
   }
 
   _clearHandlers() {
-    if (this._windowHandlerID) global.display.disconnect(this._windowHandlerID);
-    if (this._unredirectHandlerID)
+    if (this._windowHandlerID) {
+      global.display.disconnect(this._windowHandlerID);
+      this._unredirectHandlerID = null;
+    }
+    if (this._unredirectHandlerID) {
       this._settings.disconnect(this._windowHandlerID);
-
-    this._unredirectHandlerID = null;
-    this._windowHandlerID = null;
+      this._windowHandlerID = null;
+    }
   }
 
   _processWindow(windowActor, windowTitleRegex) {
@@ -129,12 +130,6 @@ class Extension {
         }
       });
       windowActor.add_child(chat.container);
-      this._overlayedWindows.push({ chat, windowActor });
-      windowActor.connect("destroy", () => {
-        this._overlayedWindows = this._overlayedWindows.filter(
-          ({ windowActor: wA }) => windowActor !== wA
-        );
-      });
     }
   }
 
@@ -147,10 +142,14 @@ class Extension {
   }
 
   _unoverlayWindows() {
-    for (const { chat, windowActor } of this._overlayedWindows) {
-      windowActor.remove_child(chat.container);
-    }
-    this._overlayedWindows = [];
+    global.get_window_actors().forEach((windowActor) => {
+      const chatWindow = windowActor
+        .get_children()
+        .find((child) => child.name === CHAT_ACTOR_NAME);
+      if (chatWindow) {
+        windowActor.remove_child(chatWindow);
+      }
+    });
   }
   disable() {
     Meta.enable_unredirect_for_display(global.display);
