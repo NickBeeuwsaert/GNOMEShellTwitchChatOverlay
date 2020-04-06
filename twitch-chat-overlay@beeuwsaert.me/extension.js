@@ -82,7 +82,6 @@ class Extension {
         yFactor: this._settings.get_double("y-position"),
         scrollback: this._settings.get_double("scrollback"),
       });
-      this._overlayedWindows.push({ chat, windowActor });
 
       // Make sure any settings changes get updated
       this._settings.connect("changed::x-position", () => {
@@ -109,6 +108,12 @@ class Extension {
         }
       });
       windowActor.add_child(chat.container);
+      this._overlayedWindows.push({ chat, windowActor });
+      windowActor.connect("destroy", () => {
+        this._overlayedWindows = this._overlayedWindows.filter(
+          ({ windowActor: wA }) => windowActor !== wA
+        );
+      });
     }
   }
 
