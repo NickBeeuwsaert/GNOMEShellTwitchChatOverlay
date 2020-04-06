@@ -26,3 +26,10 @@ Merge Requests are welcome.
 ## Screenshots
 
 Those are in the screenshots directory.
+
+## Caveats
+
+The following is a list of things to keep in mind when using this extension
+
+1. This extension connects to twitch as soon as its enabled, so make sure to disable it after every use
+2. Autoreconnect hasn't been implemented, so network issues could break the plugin
