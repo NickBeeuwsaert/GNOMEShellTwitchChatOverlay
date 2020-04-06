@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.twitchoverlay" path="/org/gnome/shell/extensions/twitchoverlay/">
+    <key name="x-position" type="d">
+      <default>1</default>
+    </key>
+    <key name="y-position" type="d">
+      <default>0.5</default>
+    </key>
+    <key name="twitch-channel" type="s">
+      <default>"ghostly_vagabond"</default>
+    </key>
+    <key name="window-regex" type="s">
+      <default>"Path of Exile"</default>
+    </key>
+    <key name="scrollback" type="d">
+      <default>25</default>
+    </key>
+  </schema>
+</schemalist>

@@ -1,0 +1,6 @@
+{
+  "name": "Twitch Chat Overlay",
+  "description": "Put twitch chat over your games",
+  "uuid": "twitch-chat-overlay@beeuwsaert.me",
+  "shell-version": ["3.36"]
+}
