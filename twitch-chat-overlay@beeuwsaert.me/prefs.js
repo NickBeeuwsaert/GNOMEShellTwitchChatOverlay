@@ -45,13 +45,15 @@ function buildPrefsWidget() {
   // Right now these fire too quicky, need to find a way to debounce them
   const twitchChannelEntry = builder.get_object("twitch-channel");
 
+  twitchChannelEntry.set_text(this.settings.get_string("twitch-channel"));
   // Wait for the user to stop typing to update the twitch-channel setting
+  const saveTwitchChannelEntry = () =>
+    this.settings.set_string("twitch-channel", twitchChannelEntry.get_text());
   twitchChannelEntry.connect(
     "notify::text",
-    throttle(() => {
-      this.settings.set_string("twitch-channel", twitchChannelEntry.get_text());
-    }, 5000)
+    throttle(saveTwitchChannelEntry, 5000)
   );
+  twitchChannelEntry.connect("activate", () => saveTwitchChannelEntry());
 
   this.settings.bind(
     "window-regex",
