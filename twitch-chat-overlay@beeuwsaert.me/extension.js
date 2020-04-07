@@ -108,15 +108,24 @@ class Extension {
       chat.addInfo("Twitch Overlay enabled");
 
       // Make sure any settings changes get updated
-      this._settings.connect("changed::x-position", () => {
-        chat.xFactor = this._settings.get_double("x-position");
-      });
-      this._settings.connect("changed::y-position", () => {
-        chat.yFactor = this._settings.get_double("y-position");
-      });
-      this._settings.connect("changed::scrollback", () => {
-        chat.scrollback = this._settings.get_double("scrollback");
-      });
+      const xFactorHandlerID = this._settings.connect(
+        "changed::x-position",
+        () => {
+          chat.xFactor = this._settings.get_double("x-position");
+        }
+      );
+      const yFactorHandlerID = this._settings.connect(
+        "changed::y-position",
+        () => {
+          chat.yFactor = this._settings.get_double("y-position");
+        }
+      );
+      const scrollbackHandlerID = this._settings.connect(
+        "changed::scrollback",
+        () => {
+          chat.scrollback = this._settings.get_double("scrollback");
+        }
+      );
 
       const onClose = () =>
         chat.addInfo("Twitch connection closed. Restart extension");
@@ -139,6 +148,10 @@ class Extension {
       windowActor.connect("destroy", () => {
         this._twitchIRC.remove("close", onClose);
         this._twitchIRC.remove("message", onMessage);
+
+        this._settings.disconnect(xFactorHandlerID);
+        this._settings.disconnect(yFactorHandlerID);
+        this._settings.disconnect(scrollbackHandlerID);
       });
       windowActor.add_child(chat.container);
     }
