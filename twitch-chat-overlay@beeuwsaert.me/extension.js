@@ -105,6 +105,8 @@ class Extension {
         scrollback: this._settings.get_double("scrollback"),
       });
 
+      chat.addInfo("Twitch Overlay enabled");
+
       // Make sure any settings changes get updated
       this._settings.connect("changed::x-position", () => {
         chat.xFactor = this._settings.get_double("x-position");

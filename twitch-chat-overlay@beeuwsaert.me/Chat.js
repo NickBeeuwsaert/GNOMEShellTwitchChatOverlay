@@ -44,13 +44,13 @@ var Chat = class Chat {
 
     this._verticalConstraint = new Clutter.AlignConstraint({
       name: "vertical",
-      factor: xFactor,
+      factor: yFactor,
       source: this.container,
       alignAxis: Clutter.AlignAxis.Y_AXIS,
     });
     this._horizontalConstraint = new Clutter.AlignConstraint({
       name: "horizontal",
-      factor: yFactor,
+      factor: xFactor,
       source: this.container,
       alignAxis: Clutter.AlignAxis.X_AXIS,
     });
@@ -70,22 +70,41 @@ var Chat = class Chat {
     }
   }
 
-  addMessage(from, message) {
-    const text = new Clutter.Text({
-      lineWrap: true,
-      useMarkup: true,
-      text: `<b>${from}</b>: ${message}`,
-      color: new Clutter.Color({
-        red: 255,
-        green: 255,
-        blue: 255,
-        alpha: 255,
-      }),
-      xExpand: true,
-    });
-    this._actors.push(text);
-    this._chatActor.add_child(text);
+  _addLine(actor) {
+    this._actors.push(actor);
+    this._chatActor.add_child(actor);
     this._trimMessages();
+  }
+
+  get _textColor() {
+    return new Clutter.Color({
+      red: 255,
+      green: 255,
+      blue: 255,
+      alpha: 255,
+    });
+  }
+  addMessage(from, message) {
+    this._addLine(
+      new Clutter.Text({
+        lineWrap: true,
+        useMarkup: true,
+        text: `<b>${from}</b>: ${message}`,
+        color: this._textColor,
+        xExpand: true,
+      })
+    );
+  }
+
+  addInfo(message) {
+    this._addLine(
+      new Clutter.Text({
+        lineWrap: true,
+        text: message,
+        color: this._textColor,
+        xExpand: true,
+      })
+    );
   }
 
   set scrollback(value) {
