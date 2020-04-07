@@ -2,12 +2,25 @@
 
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
+const Gdk = imports.gi.Gdk;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const { throttle } = Me.imports.throttle;
 
 function init() {}
+
+function handleColorChange(settings, propertyName) {
+  return function (widget) {
+    settings.set_string(propertyName, widget.get_rgba().to_string());
+  };
+}
+
+function initColorWidget(widget, color) {
+  const rgba = new Gdk.RGBA();
+  rgba.parse(color);
+  widget.set_rgba(rgba);
+}
 
 function buildPrefsWidget() {
   let gschema = Gio.SettingsSchemaSource.new_from_directory(
@@ -27,6 +40,8 @@ function buildPrefsWidget() {
   const builder = Gtk.Builder.new_from_file(
     Me.dir.get_child("ui/prefs.ui").get_path()
   );
+  const chatTextColor = builder.get_object("chat-text-color");
+  const chatBackgroundColor = builder.get_object("chat-background-color");
 
   const mainGrid = builder.get_object("main-grid");
   this.settings.bind(
@@ -38,6 +53,12 @@ function buildPrefsWidget() {
   this.settings.bind(
     "y-position",
     builder.get_object("y-position-adjustment"),
+    "value",
+    Gio.SettingsBindFlags.DEFAULT
+  );
+  this.settings.bind(
+    "chat-width",
+    builder.get_object("chat-width-adjustment"),
     "value",
     Gio.SettingsBindFlags.DEFAULT
   );
@@ -72,6 +93,20 @@ function buildPrefsWidget() {
     builder.get_object("disable-unredirect"),
     "active",
     Gio.SettingsBindFlags.DEFAULT
+  );
+
+  initColorWidget(chatTextColor, this.settings.get_string("chat-text-color"));
+  initColorWidget(
+    chatBackgroundColor,
+    this.settings.get_string("chat-background-color")
+  );
+  chatTextColor.connect(
+    "color-set",
+    handleColorChange(this.settings, "chat-text-color")
+  );
+  chatBackgroundColor.connect(
+    "color-set",
+    handleColorChange(this.settings, "chat-background-color")
   );
 
   mainGrid.show_all();

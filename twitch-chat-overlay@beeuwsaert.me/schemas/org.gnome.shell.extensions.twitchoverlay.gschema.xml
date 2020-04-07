@@ -19,5 +19,14 @@
     <key name="disable-unredirect" type="b">
       <default>false</default>
     </key>
+    <key name="chat-background-color" type="s">
+      <default>"rgba(0, 0, 0, 0.5)"</default>
+    </key>
+    <key name="chat-text-color" type="s">
+      <default>"rgba(255, 255, 255, 1)"</default>
+    </key>
+    <key name="chat-width" type="d">
+      <default>512</default>
+    </key>
   </schema>
 </schemalist>

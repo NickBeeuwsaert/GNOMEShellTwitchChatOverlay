@@ -1,4 +1,5 @@
 const Gio = imports.gi.Gio;
+const Clutter = imports.gi.Clutter;
 const Meta = imports.gi.Meta;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
@@ -98,33 +99,66 @@ class Extension {
 
     if (windowTitleRegex.test(window.title)) {
       const chat = new Chat({
-        parent: windowActor,
-        margin: 25,
         xFactor: this._settings.get_double("x-position"),
         yFactor: this._settings.get_double("y-position"),
-        scrollback: this._settings.get_double("scrollback"),
+        chatWidth: this._settings.get_double("chat-width"),
+        scrollback: this._settings.get_value("scrollback") | 0,
       });
+
+      const colorHandlerFactory = (propertyName, callback) => {
+        return () => {
+          const colorString = this._settings.get_string(propertyName);
+          const [success, color] = Clutter.Color.from_string(colorString);
+          if (success) callback(color);
+          else log(`Invalid Color: ${colorString}`);
+        };
+      };
+      const textColorHandler = colorHandlerFactory(
+        "chat-text-color",
+        (color) => (chat.chat_text_color = color)
+      );
+      const backgroundColorHandler = colorHandlerFactory(
+        "chat-background-color",
+        (color) => (chat.chat_background_color = color)
+      );
+      const textColorHandlerID = this._settings.connect(
+        "changed::chat-text-color",
+        textColorHandler
+      );
+      const backgroundColorHandlerID = this._settings.connect(
+        "changed::chat-background-color",
+        backgroundColorHandler
+      );
+
+      backgroundColorHandler();
+      textColorHandler();
 
       chat.addInfo("Twitch Overlay enabled");
 
       // Make sure any settings changes get updated
-      const xFactorHandlerID = this._settings.connect(
-        "changed::x-position",
-        () => {
-          chat.xFactor = this._settings.get_double("x-position");
-        }
+      this._settings.bind(
+        "chat-width",
+        chat,
+        "chat-width",
+        Gio.SettingsBindFlags.DEFAULT
       );
-      const yFactorHandlerID = this._settings.connect(
-        "changed::y-position",
-        () => {
-          chat.yFactor = this._settings.get_double("y-position");
-        }
+      this._settings.bind(
+        "x-position",
+        chat,
+        "x-factor",
+        Gio.SettingsBindFlags.DEFAULT
       );
-      const scrollbackHandlerID = this._settings.connect(
-        "changed::scrollback",
-        () => {
-          chat.scrollback = this._settings.get_double("scrollback");
-        }
+      this._settings.bind(
+        "y-position",
+        chat,
+        "y-factor",
+        Gio.SettingsBindFlags.DEFAULT
+      );
+      this._settings.bind(
+        "scrollback",
+        chat,
+        "scrollback",
+        Gio.SettingsBindFlags.DEFAULT
       );
 
       const onClose = () =>
@@ -142,11 +176,10 @@ class Extension {
         this._twitchIRC.remove("close", onClose);
         this._twitchIRC.remove("message", onMessage);
 
-        this._settings.disconnect(xFactorHandlerID);
-        this._settings.disconnect(yFactorHandlerID);
-        this._settings.disconnect(scrollbackHandlerID);
+        this._settings.disconnect(backgroundColorHandlerID);
+        this._settings.disconnect(textColorHandlerID);
       });
-      windowActor.add_child(chat.container);
+      windowActor.add_child(chat);
     }
   }
 
