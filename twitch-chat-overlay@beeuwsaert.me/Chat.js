@@ -151,7 +151,6 @@ var Chat = GObject.registerClass(
     }
 
     set x_factor(value) {
-      log("!!!!");
       if (typeof value !== "number")
         throw Error(`Expected "number" got "${typeof value}"`);
 
