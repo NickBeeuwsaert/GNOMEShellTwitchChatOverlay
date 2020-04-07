@@ -79,42 +79,6 @@ class Extension {
         );
       }
     );
-    // // this._twitchIRC.connect(() => {
-    // //   this._twitchIRC.authenticate();
-    // //   let leave = this._twitchIRC.join(
-    // //     this._settings.get_string("twitch-channel")
-    // //   );
-    // //   this._settings.connect("changed::twitch-channel", () => {
-    // //     leave();
-    // //     leave = this._twitchIRC.join(
-    // //       this._settings.get_string("twitch-channel")
-    // //     );
-    // //   });
-    // //   this._settings.connect("changed::window-regex", () => {
-    // //     this._unoverlayWindows();
-    // //     const windowTitleRegex = new RegExp(
-    // //       this._settings.get_string("window-regex")
-    // //     );
-    // //     this._overlayWindows(windowTitleRegex);
-    // //   });
-    // //   let windowTitleRegex = new RegExp(
-    // //     this._settings.get_string("window-regex")
-    // //   );
-
-    // //   this._overlayWindows(windowTitleRegex);
-
-    // //   this._windowHandlerID = global.display.connect(
-    // //     "window-created",
-    // //     (_, window) => {
-    // //       let windowTitleRegex = new RegExp(
-    // //         this._settings.get_string("window-regex")
-    // //       );
-    // //       // Just assume this is a WindowActor, (shhh...)
-    // //       const windowActor = window.get_compositor_private();
-    // //       this._processWindow(windowActor, windowTitleRegex);
-    // //     }
-    // //   );
-    // });
   }
 
   _clearHandlers() {
@@ -195,15 +159,6 @@ class Extension {
         Gio.SettingsBindFlags.DEFAULT
       );
 
-      const onClose = () =>
-        chat.addInfo("Twitch connection closed. Restart extension");
-      const onMessage = (message) => {
-        log("!!!");
-        if (message.command === "PRIVMSG") {
-          const [channel, text] = message.params;
-          chat.addMessage(message.tags["display-name"] || "UNKNOWN", text);
-        }
-      };
       const closeHandler = this._twitchIRC.connect("close", () =>
         chat.addInfo("Twitch connection closed. Restart extension")
       );
