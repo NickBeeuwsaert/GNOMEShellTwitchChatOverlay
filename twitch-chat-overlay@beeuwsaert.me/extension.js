@@ -10,7 +10,6 @@ const { Chat, CHAT_ACTOR_NAME } = Me.imports.Chat;
 
 class Extension {
   constructor() {
-    this._twitchIRC = new TwitchIRC();
     let gschema = Gio.SettingsSchemaSource.new_from_directory(
       Me.dir.get_child("schemas").get_path(),
       Gio.SettingsSchemaSource.get_default(),
@@ -24,6 +23,7 @@ class Extension {
       ),
     });
 
+    this._twitchIRC = new TwitchIRC();
     this._windowHandlerID = null;
     this._unredirectHandlerID = null;
   }
@@ -32,6 +32,7 @@ class Extension {
     if (this._settings.get_boolean("disable-unredirect")) {
       Meta.disable_unredirect_for_display(global.display);
     }
+
     this._unredirectHandlerID = this._settings.connect(
       "changed::disable-unredirect",
       () => {
@@ -45,42 +46,75 @@ class Extension {
       }
     );
 
-    this._twitchIRC.connect(() => {
+    this._twitchIRC.connect("connected", () => {
+      log("WebSocket connected");
       this._twitchIRC.authenticate();
-      let leave = this._twitchIRC.join(
-        this._settings.get_string("twitch-channel")
-      );
-      this._settings.connect("changed::twitch-channel", () => {
-        leave();
-        leave = this._twitchIRC.join(
-          this._settings.get_string("twitch-channel")
-        );
-      });
-      this._settings.connect("changed::window-regex", () => {
-        this._unoverlayWindows();
-        const windowTitleRegex = new RegExp(
-          this._settings.get_string("window-regex")
-        );
-        this._overlayWindows(windowTitleRegex);
-      });
-      let windowTitleRegex = new RegExp(
-        this._settings.get_string("window-regex")
-      );
 
-      this._overlayWindows(windowTitleRegex);
-
-      this._windowHandlerID = global.display.connect(
-        "window-created",
-        (_, window) => {
-          let windowTitleRegex = new RegExp(
-            this._settings.get_string("window-regex")
-          );
-          // Just assume this is a WindowActor, (shhh...)
-          const windowActor = window.get_compositor_private();
-          this._processWindow(windowActor, windowTitleRegex);
-        }
+      this._settings.bind(
+        "twitch-channel",
+        this._twitchIRC,
+        "channel",
+        Gio.SettingsBindFlags.DEFAULT
       );
     });
+    this._twitchIRC.establishConnection();
+
+    this._settings.connect("changed::window-regex", () => {
+      this._unoverlayWindows();
+      const windowTitleRegex = new RegExp(
+        this._settings.get_string("window-regex")
+      );
+      this._overlayWindows(windowTitleRegex);
+    });
+
+    this._overlayWindows(new RegExp(this._settings.get_string("window-regex")));
+    this._windowHandlerID = global.display.connect(
+      "window-created",
+      (_, window) => {
+        // Just assume this is a WindowActor, (shhh...)
+        const windowActor = window.get_compositor_private();
+        this._processWindow(
+          windowActor,
+          new RegExp(this._settings.get_string("window-regex"))
+        );
+      }
+    );
+    // // this._twitchIRC.connect(() => {
+    // //   this._twitchIRC.authenticate();
+    // //   let leave = this._twitchIRC.join(
+    // //     this._settings.get_string("twitch-channel")
+    // //   );
+    // //   this._settings.connect("changed::twitch-channel", () => {
+    // //     leave();
+    // //     leave = this._twitchIRC.join(
+    // //       this._settings.get_string("twitch-channel")
+    // //     );
+    // //   });
+    // //   this._settings.connect("changed::window-regex", () => {
+    // //     this._unoverlayWindows();
+    // //     const windowTitleRegex = new RegExp(
+    // //       this._settings.get_string("window-regex")
+    // //     );
+    // //     this._overlayWindows(windowTitleRegex);
+    // //   });
+    // //   let windowTitleRegex = new RegExp(
+    // //     this._settings.get_string("window-regex")
+    // //   );
+
+    // //   this._overlayWindows(windowTitleRegex);
+
+    // //   this._windowHandlerID = global.display.connect(
+    // //     "window-created",
+    // //     (_, window) => {
+    // //       let windowTitleRegex = new RegExp(
+    // //         this._settings.get_string("window-regex")
+    // //       );
+    // //       // Just assume this is a WindowActor, (shhh...)
+    // //       const windowActor = window.get_compositor_private();
+    // //       this._processWindow(windowActor, windowTitleRegex);
+    // //     }
+    // //   );
+    // });
   }
 
   _clearHandlers() {
@@ -102,7 +136,7 @@ class Extension {
         xFactor: this._settings.get_double("x-position"),
         yFactor: this._settings.get_double("y-position"),
         chatWidth: this._settings.get_double("chat-width"),
-        scrollback: this._settings.get_value("scrollback") | 0,
+        scrollback: this._settings.get_value("scrollback"),
       });
 
       const colorHandlerFactory = (propertyName, callback) => {
@@ -164,17 +198,30 @@ class Extension {
       const onClose = () =>
         chat.addInfo("Twitch connection closed. Restart extension");
       const onMessage = (message) => {
+        log("!!!");
         if (message.command === "PRIVMSG") {
           const [channel, text] = message.params;
           chat.addMessage(message.tags["display-name"] || "UNKNOWN", text);
         }
       };
-      this._twitchIRC.on("close", onClose);
-      this._twitchIRC.on("message", onMessage);
+      const closeHandler = this._twitchIRC.connect("close", () =>
+        chat.addInfo("Twitch connection closed. Restart extension")
+      );
+      const messageHandler = this._twitchIRC.connect(
+        "message",
+        (_, message) => {
+          if (message.command === "PRIVMSG") {
+            const [channel, text] = message.params;
+            const tags = message.tags;
+            const displayName = tags["display-name"] || "UNKNOWN";
+            chat.addMessage(displayName, text);
+          }
+        }
+      );
 
       windowActor.connect("destroy", () => {
-        this._twitchIRC.remove("close", onClose);
-        this._twitchIRC.remove("message", onMessage);
+        this._twitchIRC.disconnect(closeHandler);
+        this._twitchIRC.disconnect(messageHandler);
 
         this._settings.disconnect(backgroundColorHandlerID);
         this._settings.disconnect(textColorHandlerID);

@@ -61,7 +61,7 @@ var Chat = GObject.registerClass(
     },
   },
   class ChatActor extends Clutter.Actor {
-    _init({}) {
+    _init() {
       super._init({
         name: CHAT_ACTOR_NAME,
       });

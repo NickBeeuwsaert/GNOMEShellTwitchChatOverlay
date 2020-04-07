@@ -1,113 +1,168 @@
 const Soup = imports.gi.Soup;
+const GObject = imports.gi.GObject;
 const byteArray = imports.byteArray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const { parseMessage } = Me.imports.parseIRC;
-const { EventEmitter } = Me.imports.EventEmitter;
 
-function _ws_connect(uri, cb) {
-  const session = new Soup.Session();
-  const message = new Soup.Message({
-    method: "GET",
-    uri: Soup.URI.new(uri),
-  });
+const TWITCH_SERVER = "wss://irc-ws.chat.twitch.tv:443";
 
-  session.websocket_connect_async(message, "origin", [], null, (_, res) => {
-    try {
-      cb(null, session.websocket_connect_finish(res));
-    } catch (e) {
-      cb(e);
+var IRCMessage = GObject.registerClass(
+  {
+    GTypeName: "IRCMessage",
+  },
+  class IRCMessage extends GObject.Object {
+    _init({ raw, tags, prefix, command, params }) {
+      super._init();
+
+      this.raw = raw;
+      this.tags = tags;
+      this.prefix = prefix;
+      this.command = command;
+      this.params = params;
     }
-  });
-}
-
-// TODO: Implement reconnecting...
-var TwitchIRC = class TwitchIRC {
-  constructor() {
-    this._websocket = null;
-    this._event_emitter = new EventEmitter();
-    this._authenticated = false;
   }
+);
 
-  connect(callback) {
-    if (this._websocket) {
-      callback();
-      return;
+var TwitchIRC = GObject.registerClass(
+  {
+    GTypeName: "TwitchIRC",
+    Signals: {
+      message: {
+        flags: GObject.SignalFlags.RUN_FIRST,
+        param_types: [GObject.TYPE_OBJECT],
+        return_type: GObject.TYPE_NONE,
+        accumulator: GObject.AccumulatorType.NONE,
+      },
+      connected: {},
+      error: {},
+      close: {},
+    },
+    Properties: {
+      websocket: GObject.ParamSpec.object(
+        "websocket",
+        "Websocket",
+        "The websocket, or null",
+        GObject.ParamFlags.READABLE,
+        Soup.WebsocketConnection.$gtype
+      ),
+      channel: GObject.ParamSpec.string(
+        "channel",
+        "Channel",
+        "The Channel that is currently connected",
+        GObject.ParamFlags.READWRITE,
+        null
+      ),
+    },
+  },
+  class TwitchIRC extends GObject.Object {
+    _init({ server = TWITCH_SERVER } = {}) {
+      super._init();
+      this._server = server;
+      this._authenticated = false;
     }
-    _ws_connect("wss://irc-ws.chat.twitch.tv:443", (err, connection) => {
-      if (err) {
-        throw err;
+
+    get websocket() {
+      if (this._websocket === undefined) {
+        this._websocket = null;
       }
-      this._websocket = connection;
-      connection.connect("message", (_, type, data) => {
-        if (type !== Soup.WebsocketDataType.TEXT) return;
 
-        const text = byteArray.toString(byteArray.fromGBytes(data));
-
-        text.split(/\r\n/).forEach((rawMessage) => {
-          if (rawMessage.trim().length === 0) return;
-
-          const message = parseMessage(rawMessage);
-
-          if (message.command === "PING") {
-            this.send("PONG :tmi.twitch.tv");
-          }
-          this._event_emitter.fire("message", parseMessage(rawMessage));
-        });
-      });
-
-      connection.connect("error", (_, err) => {
-        log(err);
-      });
-      connection.connect("closed", () => {
-        this.close();
-      });
-
-      callback();
-    });
-  }
-
-  authenticate() {
-    if (!this._websocket) {
-      throw new Error("Not connected");
+      return this._websocket;
     }
-    if (this._authenticated) return;
-    // Fun fact: you can connect to the twitch IRC endpoints with a justinfan username
-    const username = `justinfan${Math.floor(Math.random() * 80000 + 1000)}`;
-    this.send(
-      "CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership"
-    );
-    this.send(`NICK ${username}`);
 
-    this._authenticated = true;
-  }
+    get channel() {
+      if (this._channel === undefined) {
+        this._channel = null;
+      }
 
-  join(channel) {
-    this.send(`JOIN #${channel}`);
-    return () => this.leave(channel);
-  }
-  leave(channel) {
-    this.send(`PART #${channel}`);
-  }
-
-  send(text) {
-    this._websocket.send_text(text);
-  }
-
-  on(event, cb) {
-    this._event_emitter.on(event, cb);
-  }
-  remove(event, cb) {
-    this._event_emitter.remove(event, cb);
-  }
-
-  close() {
-    log("CLOSE");
-    this._event_emitter.fire("close");
-    if (this._websocket.get_state() === Soup.WebsocketState.OPEN) {
-      this._websocket.close(Soup.WebsocketCloseCode.NORMAL, null);
+      return this._channel;
     }
-    this._websocket = null;
-    this._authenticated = false;
+    set channel(newChannel) {
+      const oldChannel = this.channel;
+      if (typeof newChannel !== "string")
+        throw new Error(`Expected "string" got ${typeof value}`);
+
+      // Don't needlessly swap channels
+      if (oldChannel === newChannel) return;
+
+      if (oldChannel) this.send(`PART #${oldChannel}`);
+      this.send(`JOIN #${newChannel}`);
+
+      this._channel = newChannel;
+      this.notify("channel");
+    }
+
+    establishConnection() {
+      const session = new Soup.Session();
+      const message = new Soup.Message({
+        method: "GET",
+        uri: new Soup.URI(this._server),
+      });
+
+      session.websocket_connect_async(message, "origin", [], null, (_, res) => {
+        try {
+          const websocket = session.websocket_connect_finish(res);
+          websocket.connect("message", (_, type, data) =>
+            this._handleMessage(type, data)
+          );
+          websocket.connect("error", (_, err) => this.emit("error", err));
+          websocket.connect("closed", () => this.close());
+          this._websocket = websocket;
+
+          this.emit("connected");
+        } catch (e) {
+          this.emit("error", e);
+        }
+      });
+    }
+
+    _handleMessage(type, data) {
+      // Skip over non-text messages
+      if (type !== Soup.WebsocketDataType.TEXT) return;
+
+      const text = byteArray.toString(byteArray.fromGBytes(data));
+
+      text.split(/\r\n/).forEach((rawMessage) => {
+        if (rawMessage.trim().length === 0) return;
+
+        const message = parseMessage(rawMessage);
+
+        if (message.command === "PING") {
+          this.send("PONG :tmi.twitch.tv");
+        }
+
+        this.emit("message", new IRCMessage(message));
+      });
+    }
+
+    authenticate() {
+      if (!this.websocket) {
+        throw new Error("Not connected");
+      }
+
+      if (this._authenticated) return;
+      // Fun fact: you can connect to the twitch IRC endpoints with a justinfan username
+
+      const username = `justinfan${Math.floor(Math.random() * 80000 + 1000)}`;
+      this.send(
+        "CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership"
+      );
+      this.send(`NICK ${username}`);
+
+      this._authenticated = true;
+    }
+
+    send(text) {
+      if (!this._websocket) throw new Error("Not connected");
+      this._websocket.send_text(text);
+    }
+    close() {
+      if (this._websocket.get_state() === Soup.WebsocketState.OPEN) {
+        this._websocket.close(Soup.WebsocketCloseCode.NORMAL, null);
+      }
+      this._websocket = null;
+      this._authenticated = false;
+      this.emit("close");
+    }
   }
-};
+);
