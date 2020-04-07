@@ -53,7 +53,9 @@ var TwitchIRC = class TwitchIRC {
       connection.connect("error", (_, err) => {
         log(err);
       });
-      connection.connect("closed", () => log("closed"));
+      connection.connect("closed", () => {
+        this.close();
+      });
 
       callback();
     });
@@ -89,9 +91,16 @@ var TwitchIRC = class TwitchIRC {
   on(event, cb) {
     this._event_emitter.on(event, cb);
   }
+  remove(event, cb) {
+    this._event_emitter.remove(event, cb);
+  }
 
   close() {
-    this._websocket.close(Soup.WebsocketCloseCode.NORMAL, null);
+    log("CLOSE");
+    this._event_emitter.fire("close");
+    if (this._websocket.get_state() === Soup.WebsocketState.OPEN) {
+      this._websocket.close(Soup.WebsocketCloseCode.NORMAL, null);
+    }
     this._websocket = null;
     this._authenticated = false;
   }

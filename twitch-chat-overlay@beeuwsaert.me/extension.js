@@ -118,7 +118,9 @@ class Extension {
         chat.scrollback = this._settings.get_double("scrollback");
       });
 
-      this._twitchIRC.on("message", (message) => {
+      const onClose = () =>
+        chat.addInfo("Twitch connection closed. Restart extension");
+      const onMessage = (message) => {
         switch (message.command) {
           case "PRIVMSG":
             {
@@ -130,6 +132,13 @@ class Extension {
             this._twitchIRC.send("PONG :tmi.twitch.tv");
             break;
         }
+      };
+      this._twitchIRC.on("close", onClose);
+      this._twitchIRC.on("message", onMessage);
+
+      windowActor.connect("destroy", () => {
+        this._twitchIRC.remove("close", onClose);
+        this._twitchIRC.remove("message", onMessage);
       });
       windowActor.add_child(chat.container);
     }

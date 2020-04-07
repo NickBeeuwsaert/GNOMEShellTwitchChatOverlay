@@ -13,7 +13,7 @@ var EventEmitter = class EventEmitter {
   remove(event, callback) {
     // If there are no callbacks, don't bother removing anything
     if (!this._events[event]) return;
-    this._events[event] = this._events.filter((cb) => cb !== callback);
+    this._events[event] = this._events[event].filter((cb) => cb !== callback);
   }
 
   once(event, callback) {

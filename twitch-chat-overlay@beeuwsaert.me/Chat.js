@@ -12,8 +12,6 @@ var Chat = class Chat {
     yFactor = 0,
     scrollback = 25,
   }) {
-    this._actors = [];
-    this.scrollback = scrollback;
     this.container = new Clutter.Actor({
       name: CHAT_ACTOR_NAME,
       x: 0,
@@ -62,16 +60,16 @@ var Chat = class Chat {
     this.marginBottom = marginBottom;
     this.marginLeft = marginLeft;
     this.marginRight = marginRight;
+    this.scrollback = scrollback;
   }
 
   _trimMessages() {
-    while (this._scrollback < this._actors.length) {
-      this._chatActor.remove_child(this._actors.shift());
+    while (this._scrollback < this._chatActor.get_n_children()) {
+      this._chatActor.remove_child(this._chatActor.get_first_child());
     }
   }
 
   _addLine(actor) {
-    this._actors.push(actor);
     this._chatActor.add_child(actor);
     this._trimMessages();
   }
