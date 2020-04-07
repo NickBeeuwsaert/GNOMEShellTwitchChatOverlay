@@ -1,4 +1,6 @@
 const Clutter = imports.gi.Clutter;
+const Pango = imports.gi.Pango;
+
 var CHAT_ACTOR_NAME = "twitchOverlay";
 var Chat = class Chat {
   constructor({
@@ -83,15 +85,33 @@ var Chat = class Chat {
     });
   }
   addMessage(from, message) {
-    this._addLine(
-      new Clutter.Text({
-        lineWrap: true,
-        useMarkup: true,
-        text: `<b>${from}</b>: ${message}`,
-        color: this._textColor,
-        xExpand: true,
-      })
-    );
+    const boldAttributeList = new Pango.AttrList();
+    boldAttributeList.insert(Pango.attr_weight_new(Pango.Weight.BOLD));
+    const fromActor = new Clutter.Text({
+      text: `${from}: `,
+      color: this._textColor,
+      attributes: boldAttributeList,
+      xExpand: false,
+      yExpand: true,
+      yAlign: Clutter.ActorAlign.START,
+    });
+    const messageActor = new Clutter.Text({
+      lineWrap: true,
+      text: message,
+      color: this._textColor,
+      xExpand: true,
+      yAlign: Clutter.ActorAlign.START,
+      lineWrap: true,
+      lineWrapMode: Pango.WrapMode.WORD_CHAR,
+    });
+    const contentActor = new Clutter.Actor({
+      layoutManager: new Clutter.BoxLayout({}),
+      yExpand: true,
+    });
+    contentActor.add_child(fromActor);
+    contentActor.add_child(messageActor);
+
+    this._addLine(contentActor);
   }
 
   addInfo(message) {

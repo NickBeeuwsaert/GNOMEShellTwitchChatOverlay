@@ -46,6 +46,12 @@ var TwitchIRC = class TwitchIRC {
 
         text.split(/\r\n/).forEach((rawMessage) => {
           if (rawMessage.trim().length === 0) return;
+
+          const message = parseMessage(rawMessage);
+
+          if (message.command === "PING") {
+            this.send("PONG :tmi.twitch.tv");
+          }
           this._event_emitter.fire("message", parseMessage(rawMessage));
         });
       });

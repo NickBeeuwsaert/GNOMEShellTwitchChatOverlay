@@ -130,16 +130,9 @@ class Extension {
       const onClose = () =>
         chat.addInfo("Twitch connection closed. Restart extension");
       const onMessage = (message) => {
-        switch (message.command) {
-          case "PRIVMSG":
-            {
-              const [channel, text] = message.params;
-              chat.addMessage(message.tags["display-name"] || "UNKNOWN", text);
-            }
-            break;
-          case "PING":
-            this._twitchIRC.send("PONG :tmi.twitch.tv");
-            break;
+        if (message.command === "PRIVMSG") {
+          const [channel, text] = message.params;
+          chat.addMessage(message.tags["display-name"] || "UNKNOWN", text);
         }
       };
       this._twitchIRC.on("close", onClose);
