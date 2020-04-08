@@ -65,13 +65,19 @@ var Chat = GObject.registerClass(
       super._init({
         ...props,
         name: CHAT_ACTOR_NAME,
+        x: 0,
+        y: 0,
       });
 
-      this._parentHandlerID = null;
-      this.connect("parent-set", (_, prevParent) =>
-        this._onParentChanged(prevParent)
+      const bindConstraint = new Clutter.BindConstraint({
+        source: null,
+        coordinate: Clutter.BindCoordinate.SIZE,
+        offset: 0,
+      });
+      this.add_constraint(bindConstraint);
+      this.connect("parent-set", () =>
+        bindConstraint.set_source(this.get_parent())
       );
-      this.connect("destroy", () => this._onDestroy());
       this.connect("notify::scrollback", () => this._trimMessages());
 
       this._chatActor = new Clutter.Actor({
@@ -343,35 +349,6 @@ var Chat = GObject.registerClass(
     _addLine(actor) {
       this._chatActor.add_child(actor);
       this._trimMessages();
-    }
-
-    _onParentChanged(previousParent) {
-      if (this._parentHandlerID) {
-        previousParent.disconnect(this._parentHandlerID);
-      }
-
-      const parent = this.get_parent();
-
-      if (!parent) return;
-
-      this._onParentAllocationChanged(this.get_parent());
-      this._parentHandlerID = this.get_parent().connect(
-        "allocation-changed",
-        (parent) => this._onParentAllocationChanged(parent)
-      );
-    }
-
-    _onParentAllocationChanged(parent) {
-      // Fill up the whole area
-      this.set_position(0, 0);
-      this.set_size(parent.width, parent.height);
-    }
-
-    _onDestroy() {
-      const parent = this.get_parent();
-      if (this._parentHandlerID && parent) {
-        this.get_parent().disconnect(this._parentHandlerID);
-      }
     }
   }
 );
