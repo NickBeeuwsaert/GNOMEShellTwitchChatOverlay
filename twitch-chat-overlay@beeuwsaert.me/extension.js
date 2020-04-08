@@ -70,11 +70,11 @@ class Extension {
   _clearHandlers() {
     if (this._windowHandlerID) {
       global.display.disconnect(this._windowHandlerID);
-      this._unredirectHandlerID = null;
+      this._windowHandlerID = null;
     }
     if (this._unredirectHandlerID) {
-      this._settings.disconnect(this._windowHandlerID);
-      this._windowHandlerID = null;
+      this._settings.disconnect(this._unredirectHandlerID);
+      this._unredirectHandlerID = null;
     }
   }
 
