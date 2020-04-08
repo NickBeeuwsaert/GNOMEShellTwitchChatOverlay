@@ -4,6 +4,12 @@ An extension to overlay twitch chat on top of your windows
 
 ## Installation
 
+Head over to the [releases](https://github.com/NickBeeuwsaert/GNOMEShellTwitchChatOverlay/releases) page, and download the latest release.
+
+Install it using `gnome-extensions install twitch-chat-overlay@beeuwsaert.me.zip`
+
+## Development
+
 First clone, and symlink the extension to your gnome extensions directory
 
 ```sh
