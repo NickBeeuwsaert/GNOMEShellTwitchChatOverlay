@@ -141,7 +141,8 @@ var TwitchIRC = GObject.registerClass(
       }
 
       if (this._authenticated) return;
-      // Fun fact: you can connect to the twitch IRC endpoints with a justinfan username
+      // Fun fact: you can connect to the twitch IRC endpoints anonymously
+      // with a justinfan#### username
 
       const username = `justinfan${Math.floor(Math.random() * 80000 + 1000)}`;
       this.send(
@@ -157,7 +158,10 @@ var TwitchIRC = GObject.registerClass(
       this._websocket.send_text(text);
     }
     close() {
-      if (this._websocket.get_state() === Soup.WebsocketState.OPEN) {
+      if (
+        this._websocket &&
+        this._websocket.get_state() === Soup.WebsocketState.OPEN
+      ) {
         this._websocket.close(Soup.WebsocketCloseCode.NORMAL, null);
       }
       this._websocket = null;

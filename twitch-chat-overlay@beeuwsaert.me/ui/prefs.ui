@@ -53,7 +53,7 @@
                 <property name="width_request">150</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Vertical alignment</property>
+                <property name="label" translatable="yes">Horizontal alignment</property>
                 <property name="xalign">0</property>
               </object>
               <packing>
@@ -105,7 +105,7 @@
                 <property name="width_request">150</property>
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Horizontal alignment</property>
+                <property name="label" translatable="yes">Vertical alignment</property>
                 <property name="xalign">0</property>
                 <style>
                   <class name="title"/>

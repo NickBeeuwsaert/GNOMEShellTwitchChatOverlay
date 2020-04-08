@@ -2,5 +2,6 @@
   "name": "Twitch Chat Overlay",
   "description": "Put twitch chat over your games",
   "uuid": "twitch-chat-overlay@beeuwsaert.me",
-  "shell-version": ["3.36"]
+  "shell-version": ["3.36"],
+  "settings-schema": "org.gnome.shell.extensions.twitchoverlay"
 }

@@ -44,18 +44,20 @@ function buildPrefsWidget() {
   const chatBackgroundColor = builder.get_object("chat-background-color");
 
   const mainGrid = builder.get_object("main-grid");
-  this.settings.bind(
-    "x-position",
-    builder.get_object("x-position-adjustment"),
-    "value",
-    Gio.SettingsBindFlags.DEFAULT
-  );
-  this.settings.bind(
-    "y-position",
-    builder.get_object("y-position-adjustment"),
-    "value",
-    Gio.SettingsBindFlags.DEFAULT
-  );
+
+  ["y-position", "x-position"].forEach((name) => {
+    this.settings.bind(
+      name,
+      builder.get_object(`${name}-adjustment`),
+      "value",
+      Gio.SettingsBindFlags.DEFAULT
+    );
+
+    builder
+      .get_object(name)
+      .connect("format-value", (_, value) => `${(value * 100).toFixed(0)}%`);
+  });
+
   this.settings.bind(
     "chat-width",
     builder.get_object("chat-width-adjustment"),
@@ -70,6 +72,7 @@ function buildPrefsWidget() {
   // Wait for the user to stop typing to update the twitch-channel setting
   const saveTwitchChannelEntry = () =>
     this.settings.set_string("twitch-channel", twitchChannelEntry.get_text());
+
   twitchChannelEntry.connect(
     "notify::text",
     throttle(saveTwitchChannelEntry, 5000)
