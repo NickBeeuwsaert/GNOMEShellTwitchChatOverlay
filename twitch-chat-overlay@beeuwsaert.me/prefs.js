@@ -15,7 +15,34 @@ function handleColorChange(settings, propertyName) {
     settings.set_string(propertyName, widget.get_rgba().to_string());
   };
 }
+const setErrorIfEmptyHandler = (widget) => {
+  const styleContext = widget.get_style_context();
+  const callback = () => {
+    if (widget.get_text() === "") {
+      styleContext.add_class("error");
+    } else {
+      styleContext.remove_class("error");
+    }
+  };
+  widget.connect("notify::text", callback);
+  callback();
+};
 
+const bindTimeout = (settings, setting, widget, timeout) => {
+  const callback = () => {
+    log("!!!");
+    settings.set_string(setting, widget.get_text());
+  };
+
+  widget.connect("notify::text", throttle(callback, timeout));
+  widget.connect("activate", callback);
+
+  settings.connect(`changed::${setting}`, () => {
+    widget.set_text(settings.get_string(setting));
+  });
+
+  widget.set_text(settings.get_string(setting));
+};
 function initColorWidget(widget, color) {
   const rgba = new Gdk.RGBA();
   rgba.parse(color);
@@ -69,22 +96,14 @@ function buildPrefsWidget() {
   const twitchChannelEntry = builder.get_object("twitch-channel");
 
   twitchChannelEntry.set_text(this.settings.get_string("twitch-channel"));
-  // Wait for the user to stop typing to update the twitch-channel setting
-  const saveTwitchChannelEntry = () =>
-    this.settings.set_string("twitch-channel", twitchChannelEntry.get_text());
+  setErrorIfEmptyHandler(twitchChannelEntry);
+  bindTimeout(this.settings, "twitch-channel", twitchChannelEntry, 5000);
 
-  twitchChannelEntry.connect(
-    "notify::text",
-    throttle(saveTwitchChannelEntry, 5000)
-  );
-  twitchChannelEntry.connect("activate", () => saveTwitchChannelEntry());
+  const windowRegexEntry = builder.get_object("window-regex");
 
-  this.settings.bind(
-    "window-regex",
-    builder.get_object("window-regex"),
-    "text",
-    Gio.SettingsBindFlags.DEFAULT
-  );
+  setErrorIfEmptyHandler(windowRegexEntry);
+  bindTimeout(this.settings, "window-regex", windowRegexEntry, 5000);
+
   this.settings.bind(
     "scrollback",
     builder.get_object("scrollback-adjustment"),
@@ -119,6 +138,13 @@ function buildPrefsWidget() {
   );
 
   mainGrid.show_all();
+
+  mainGrid.connect("parent-set", () => {
+    mainGrid.parent.connect("destroy", () => {
+      this.settings.set_string("twitch-channel", twitchChannelEntry.text);
+      this.settings.set_string("window-regex", windowRegexEntry.text);
+    });
+  });
 
   return mainGrid;
 }

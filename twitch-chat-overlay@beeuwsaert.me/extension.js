@@ -5,12 +5,6 @@ const { OverlayManager } = Me.imports.OverlayManager;
 const { TwitchOverlayIndicator, IndicatorState } = Me.imports.Indicator;
 
 /* exported init */
-//
-
-// Normally this is not the way to check if a setting has been set by the user
-// but in our case the default values for window-regex and channel are always invalid
-const isSettingDefault = (settings, key) =>
-  settings.get_value(key).compare(settings.get_default_value(key)) === 0;
 
 class Extension {
   constructor() {
@@ -58,8 +52,8 @@ class Extension {
 
   _syncSettings() {
     if (
-      isSettingDefault(this._settings, "twitch-channel") ||
-      isSettingDefault(this._settings, "window-regex")
+      this._settings.get_string("twitch-channel") === "" ||
+      this._settings.get_string("window-regex") === ""
     ) {
       this.deactivate();
       this._indicator.state = IndicatorState.ERROR;
