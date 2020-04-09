@@ -159,7 +159,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Twitch Channel</property>
+                <property name="label" translatable="yes">Twitch channel</property>
                 <property name="xalign">0</property>
               </object>
               <packing>
@@ -209,7 +209,7 @@
                   <object class="GtkLabel">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">Window Title</property>
+                    <property name="label" translatable="yes">Window title</property>
                     <property name="xalign">0</property>
                   </object>
                   <packing>
@@ -395,7 +395,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Background Color</property>
+                <property name="label" translatable="yes">Background color</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -408,6 +408,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="valign">center</property>
                 <property name="use_alpha">True</property>
               </object>
               <packing>
@@ -439,7 +440,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Text Color</property>
+                <property name="label" translatable="yes">Text color</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -452,6 +453,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="valign">center</property>
                 <property name="use_alpha">True</property>
               </object>
               <packing>
@@ -483,7 +485,7 @@
               <object class="GtkLabel">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="label" translatable="yes">Chat Width</property>
+                <property name="label" translatable="yes">Chat width</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -495,7 +497,55 @@
               <object class="GtkSpinButton" id="chat-width">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
+                <property name="valign">center</property>
                 <property name="adjustment">chat-width-adjustment</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="pack_type">end</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child>
+      <object class="GtkListBoxRow">
+        <property name="width_request">100</property>
+        <property name="height_request">80</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <child>
+          <object class="GtkBox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_left">12</property>
+            <property name="margin_right">12</property>
+            <property name="margin_top">12</property>
+            <property name="margin_bottom">12</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Font</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">True</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkFontButton" id="chat-font">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="receives_default">True</property>
+                <property name="valign">center</property>
+                <property name="font">Sans 12</property>
+                <property name="language">en-us</property>
+                <property name="preview_text"/>
               </object>
               <packing>
                 <property name="expand">False</property>

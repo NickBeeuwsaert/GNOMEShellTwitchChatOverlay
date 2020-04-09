@@ -97,6 +97,12 @@ function buildPrefsWidget() {
     "active",
     Gio.SettingsBindFlags.DEFAULT
   );
+  this.settings.bind(
+    "chat-font",
+    builder.get_object("chat-font"),
+    "font",
+    Gio.SettingsBindFlags.DEFAULT
+  );
 
   initColorWidget(chatTextColor, this.settings.get_string("chat-text-color"));
   initColorWidget(

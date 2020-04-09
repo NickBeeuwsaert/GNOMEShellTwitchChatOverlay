@@ -17,6 +17,13 @@ var Chat = GObject.registerClass(
         1000,
         512 // default value
       ),
+      "chat-font": GObject.ParamSpec.string(
+        "chat-font", // name
+        "Chat Font",
+        "Font to use for messages", // description
+        GObject.ParamFlags.READWRITE, // Read-write
+        null // default value
+      ),
       "chat-background-color": GObject.ParamSpec.boxed(
         "chat-background-color", // name
         "Chat Background Color",
@@ -150,6 +157,23 @@ var Chat = GObject.registerClass(
       this.notify("chat-width");
     }
 
+    get chat_font() {
+      if (this._chatFont === undefined) {
+        this._chatFont = null;
+      }
+      return this._chatFont;
+    }
+
+    set chat_font(value) {
+      if (typeof value !== "string")
+        throw Error(`Expected "string" got "${typeof value}"`);
+
+      if (this.chat_font === value) return;
+
+      this._chatFont = value;
+      this.notify("chat-font");
+    }
+
     get x_factor() {
       if (this._xFactor === undefined) {
         this._xFactor = 1;
@@ -250,6 +274,12 @@ var Chat = GObject.registerClass(
     set chatWidth(value) {
       this.chat_width = value;
     }
+    get chatFont() {
+      return this.chat_font;
+    }
+    set chatFont(value) {
+      this.chat_font = value;
+    }
 
     get xFactor() {
       return this.x_factor;
@@ -284,6 +314,7 @@ var Chat = GObject.registerClass(
         lineWrap: true,
         text: message,
         color: this.chat_text_color,
+        fontName: this.chat_font,
         xExpand: true,
       });
 
@@ -291,6 +322,12 @@ var Chat = GObject.registerClass(
         "chat-text-color",
         infoActor,
         "color",
+        GObject.BindingFlags.DEFAULT
+      );
+      this.bind_property(
+        "chat-font",
+        infoActor,
+        "font-name",
         GObject.BindingFlags.DEFAULT
       );
       this._addLine(infoActor);
@@ -302,6 +339,7 @@ var Chat = GObject.registerClass(
       const fromActor = new Clutter.Text({
         text: `${from}: `,
         color: this.chat_text_color,
+        fontName: this.chat_font,
         attributes: boldAttributeList,
         xExpand: false,
         yExpand: true,
@@ -310,6 +348,7 @@ var Chat = GObject.registerClass(
       const messageActor = new Clutter.Text({
         lineWrap: true,
         text: message,
+        fontName: this.chat_font,
         color: this.chat_text_color,
         xExpand: true,
         yAlign: Clutter.ActorAlign.START,
@@ -331,6 +370,18 @@ var Chat = GObject.registerClass(
         "chat-text-color",
         messageActor,
         "color",
+        GObject.BindingFlags.DEFAULT
+      );
+      this.bind_property(
+        "chat-font",
+        fromActor,
+        "font-name",
+        GObject.BindingFlags.DEFAULT
+      );
+      this.bind_property(
+        "chat-font",
+        messageActor,
+        "font-name",
         GObject.BindingFlags.DEFAULT
       );
 

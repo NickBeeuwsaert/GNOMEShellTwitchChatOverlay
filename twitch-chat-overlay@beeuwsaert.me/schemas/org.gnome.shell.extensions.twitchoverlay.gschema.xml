@@ -28,5 +28,8 @@
     <key name="chat-width" type="d">
       <default>512</default>
     </key>
+    <key name="chat-font" type="s">
+      <default>"Sans 6"</default>
+    </key>
   </schema>
 </schemalist>

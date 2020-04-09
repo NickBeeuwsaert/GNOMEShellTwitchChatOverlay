@@ -86,6 +86,7 @@ class Extension {
         xFactor: this._settings.get_double("x-position"),
         yFactor: this._settings.get_double("y-position"),
         chatWidth: this._settings.get_double("chat-width"),
+        chatFont: this._settings.get_string("chat-font"),
         scrollback: this._settings.get_double("scrollback"),
       });
       chat.addInfo("Twitch Overlay enabled");
@@ -114,6 +115,7 @@ class Extension {
         ["y-position", "y-factor"],
         ["chat-width"],
         ["scrollback"],
+        ["chat-font"],
       ]) {
         // for some reason using GSettings.bind doesn't work correctly
         // It will still try to write to the target object after settings
@@ -122,13 +124,16 @@ class Extension {
           // log(`SETTING ${setting}`);
           const variant = this._settings.get_value(setting);
           let value = null;
-
           switch (variant.get_type_string()) {
             case "d":
               value = variant.get_double();
               break;
             case "i":
               value = variant.get_int32();
+              break;
+            case "s":
+              [value] = variant.get_string();
+              break;
           }
           if (value !== null) {
             chat.set_property(property, value);
