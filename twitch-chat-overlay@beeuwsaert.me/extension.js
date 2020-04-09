@@ -39,7 +39,7 @@ class Extension {
   }
 
   activate() {
-    this.deactivate();
+    if (this._overlayManager) return;
     this._overlayManager = new OverlayManager(this._settings);
   }
 

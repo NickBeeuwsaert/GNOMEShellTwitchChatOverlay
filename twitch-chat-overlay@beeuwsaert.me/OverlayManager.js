@@ -45,9 +45,8 @@ var OverlayManager = class OverlayManager {
       "window-created",
       (_, window) => this._overlayWindowHandler(window.get_compositor_private())
     );
-    this._unredirectHandler = this._settings.connect(
-      "changed::disable-unredirect",
-      () => this._handleUnredirect
+    this._settings.connect("changed::disable-unredirect", () =>
+      this._handleUnredirect()
     );
 
     this.addOverlays();
