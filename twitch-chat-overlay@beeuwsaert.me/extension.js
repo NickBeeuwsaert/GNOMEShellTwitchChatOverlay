@@ -1,204 +1,78 @@
-const Gio = imports.gi.Gio;
-const Clutter = imports.gi.Clutter;
-const Meta = imports.gi.Meta;
+const Main = imports.ui.main;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const { TwitchIRC } = Me.imports.TwitchIRC;
-const { Chat, CHAT_ACTOR_NAME } = Me.imports.Chat;
+const { OverlayManager } = Me.imports.OverlayManager;
+const { TwitchOverlayIndicator, IndicatorState } = Me.imports.Indicator;
 
 /* exported init */
+//
+
+// Normally this is not the way to check if a setting has been set by the user
+// but in our case the default values for window-regex and channel are always invalid
+const isSettingDefault = (settings, key) =>
+  settings.get_value(key).compare(settings.get_default_value(key)) === 0;
+
 class Extension {
   constructor() {
-    this._settings = ExtensionUtils.getSettings();
-
-    this._twitchIRC = null;
-    this._windowHandlerID = null;
-    this._twitchHandlerID = null;
-    this._unredirectHandlerID = null;
-    this._channelHandlerID = null;
+    this._indicator = null;
+    this._settings = null;
+    this._overlayManager = null;
   }
 
   enable() {
-    if (this._settings.get_boolean("disable-unredirect")) {
-      Meta.disable_unredirect_for_display(global.display);
-    }
+    this._indicator = new TwitchOverlayIndicator();
+    this._settings = ExtensionUtils.getSettings();
 
-    this._unredirectHandlerID = this._settings.connect(
-      "changed::disable-unredirect",
+    this._indicatorStateHandler = this._indicator.connect(
+      "notify::state",
       () => {
-        if (this._settings.get_boolean("disable-unredirect")) {
-          Meta.disable_unredirect_for_display(global.display);
+        const state = this._indicator.state;
+
+        if (state === IndicatorState.ACTIVE) {
+          this.activate();
         } else {
-          Meta.enable_unredirect_for_display(global.display);
+          this.deactivate();
         }
       }
     );
 
-    this._twitchIRC = new TwitchIRC({
-      channel: this._settings.get_string("twitch-channel"),
-    });
-    this._twitchHandlerID = this._twitchIRC.connect("connected", () => {
-      this._twitchIRC.authenticate();
-
-      this._channelHandlerID = this._settings.connect(
-        "changed::twitch-channel",
-        () => {
-          this._twitchIRC.channel = this._settings.get_string("twitch-channel");
-        }
-      );
-    });
-    this._twitchIRC.establishConnection();
-
-    this._settings.connect("changed::window-regex", () => {
-      this._unoverlayWindows();
-      const windowTitleRegex = new RegExp(
-        this._settings.get_string("window-regex")
-      );
-      this._overlayWindows(windowTitleRegex);
-    });
-
-    this._overlayWindows(new RegExp(this._settings.get_string("window-regex")));
-    this._windowHandlerID = global.display.connect(
-      "window-created",
-      (_, window) => {
-        // Just assume this is a WindowActor, (shhh...)
-        const windowActor = window.get_compositor_private();
-        this._processWindow(
-          windowActor,
-          new RegExp(this._settings.get_string("window-regex"))
-        );
-      }
+    this._settingsHandler = this._settings.connect("changed", () =>
+      this._syncSettings()
     );
+    this._syncSettings();
+
+    Main.panel.addToStatusArea("twitch-overlay-indicator", this._indicator);
   }
 
-  _clearHandlers() {
-    if (this._windowHandlerID) {
-      global.display.disconnect(this._windowHandlerID);
-      this._windowHandlerID = null;
-    }
-    if (this._unredirectHandlerID) {
-      this._settings.disconnect(this._unredirectHandlerID);
-      this._unredirectHandlerID = null;
-    }
-    if (this._channelHandlerID) {
-      this._settings.disconnect(this._channelHandlerID);
-      this._channelHandlerID = null;
-    }
+  activate() {
+    this.deactivate();
+    this._overlayManager = new OverlayManager(this._settings);
   }
 
-  _processWindow(windowActor, windowTitleRegex) {
-    const window = windowActor.get_meta_window();
-
-    if (windowTitleRegex.test(window.title)) {
-      const chat = new Chat({
-        xFactor: this._settings.get_double("x-position"),
-        yFactor: this._settings.get_double("y-position"),
-        chatWidth: this._settings.get_double("chat-width"),
-        chatFont: this._settings.get_string("chat-font"),
-        scrollback: this._settings.get_double("scrollback"),
-      });
-      chat.addInfo("Twitch Overlay enabled");
-
-      for (const propertyName of ["chat-text-color", "chat-background-color"]) {
-        const callback = () => {
-          const colorString = this._settings.get_string(propertyName);
-          const [success, color] = Clutter.Color.from_string(colorString);
-
-          if (success) chat.set_property(propertyName, color);
-          else log(`Invalid Color: ${colorString}`);
-        };
-        const handlerID = this._settings.connect(
-          `changed::${propertyName}`,
-          callback
-        );
-
-        callback();
-
-        chat.connect("destroy", () => this._settings.disconnect(handlerID));
-      }
-
-      // Make sure any settings changes get updated
-      for (const [setting, property = setting] of [
-        ["x-position", "x-factor"],
-        ["y-position", "y-factor"],
-        ["chat-width"],
-        ["scrollback"],
-        ["chat-font"],
-      ]) {
-        // for some reason using GSettings.bind doesn't work correctly
-        // It will still try to write to the target object after settings
-        // has been freed
-        const handlerID = this._settings.connect(`changed::${setting}`, () => {
-          // log(`SETTING ${setting}`);
-          const variant = this._settings.get_value(setting);
-          let value = null;
-          switch (variant.get_type_string()) {
-            case "d":
-              value = variant.get_double();
-              break;
-            case "i":
-              value = variant.get_int32();
-              break;
-            case "s":
-              [value] = variant.get_string();
-              break;
-          }
-          if (value !== null) {
-            chat.set_property(property, value);
-          }
-        });
-
-        chat.connect("destroy", () => this._settings.disconnect(handlerID));
-      }
-
-      const closeHandler = this._twitchIRC.connect("close", () =>
-        chat.addInfo("Twitch connection closed. Restart extension")
-      );
-      const messageHandler = this._twitchIRC.connect(
-        "message",
-        (_, message) => {
-          if (message.command === "PRIVMSG") {
-            const [channel, text] = message.params;
-            const tags = message.tags;
-            const displayName = tags["display-name"] || "UNKNOWN";
-            chat.addMessage(displayName, text);
-          }
-        }
-      );
-
-      chat.connect("destroy", () => {
-        this._twitchIRC.disconnect(closeHandler);
-        this._twitchIRC.disconnect(messageHandler);
-      });
-      windowActor.add_child(chat);
+  deactivate() {
+    if (this._overlayManager) {
+      this._overlayManager.shutdown();
+      this._overlayManager = null;
     }
   }
 
-  _overlayWindows(windowTitleRegex) {
-    global
-      .get_window_actors()
-      .forEach((windowActor) =>
-        this._processWindow(windowActor, windowTitleRegex)
-      );
-  }
-
-  _unoverlayWindows() {
-    for (const windowActor of global.get_window_actors()) {
-      for (const child of windowActor.get_children()) {
-        if (child.name === CHAT_ACTOR_NAME) {
-          child.destroy();
-        }
-      }
+  _syncSettings() {
+    if (
+      isSettingDefault(this._settings, "twitch-channel") ||
+      isSettingDefault(this._settings, "window-regex")
+    ) {
+      this.deactivate();
+      this._indicator.state = IndicatorState.ERROR;
+    } else if (this._indicator.state === IndicatorState.ERROR) {
+      this._indicator.state = IndicatorState.INACTIVE;
     }
   }
+
   disable() {
-    Meta.enable_unredirect_for_display(global.display);
-    if (this._twitchHandlerID)
-      this._twitchIRC.disconnect(this._twitchHandlerID);
-    this._twitchIRC.close();
-    this._unoverlayWindows();
-    this._clearHandlers();
-    this._twitchIRC = null;
+    this.deactivate();
+    this._indicator.destroy();
+    this._settings.disconnect(this._settingsHandler);
+    this._settings = null;
   }
 }
 

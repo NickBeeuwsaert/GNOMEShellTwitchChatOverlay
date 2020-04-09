@@ -1,1 +1,9 @@
 /* Add your custom extension styling here */
+#panel .twitch-overlay-alert {
+  /* color: red !important; */
+  color: red;
+}
+#panel .twitch-overlay-active {
+  /* color: red !important; */
+  color: green;
+}

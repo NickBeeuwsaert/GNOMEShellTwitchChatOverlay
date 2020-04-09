@@ -37,7 +37,6 @@ var TwitchIRC = class TwitchIRC {
     }
 
     this._channel = newChannel;
-    this.notify("channel");
   }
 
   establishConnection() {

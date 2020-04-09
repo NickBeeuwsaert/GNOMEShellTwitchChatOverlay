@@ -8,10 +8,10 @@
       <default>0.5</default>
     </key>
     <key name="twitch-channel" type="s">
-      <default>"ghostly_vagabond"</default>
+      <default>""</default>
     </key>
     <key name="window-regex" type="s">
-      <default>"Path of Exile"</default>
+      <default>""</default>
     </key>
     <key name="scrollback" type="d">
       <default>25</default>
