@@ -56,8 +56,10 @@ var TwitchIRC = GObject.registerClass(
     },
   },
   class TwitchIRC extends GObject.Object {
-    _init({ server = TWITCH_SERVER } = {}) {
-      super._init();
+    _init({ server = TWITCH_SERVER, ...props } = {}) {
+      super._init({
+        ...props,
+      });
       this._server = server;
       this._authenticated = false;
     }
@@ -83,7 +85,10 @@ var TwitchIRC = GObject.registerClass(
         throw new Error(`Expected "string" got ${typeof value}`);
 
       // Don't needlessly swap channels
-      if (oldChannel === newChannel) return;
+      if (oldChannel === newChannel) {
+        log("Attempt to leave and join the same channel");
+        return;
+      }
 
       if (oldChannel) this.send(`PART #${oldChannel}`);
       this.send(`JOIN #${newChannel}`);
@@ -93,6 +98,9 @@ var TwitchIRC = GObject.registerClass(
     }
 
     establishConnection() {
+      if (this._websocket) {
+        throw new Error("already connected!");
+      }
       const session = new Soup.Session();
       const message = new Soup.Message({
         method: "GET",
@@ -157,6 +165,7 @@ var TwitchIRC = GObject.registerClass(
       if (!this._websocket) throw new Error("Not connected");
       this._websocket.send_text(text);
     }
+
     close() {
       if (
         this._websocket &&

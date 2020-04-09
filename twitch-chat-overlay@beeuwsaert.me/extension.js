@@ -11,10 +11,11 @@ class Extension {
   constructor() {
     this._settings = ExtensionUtils.getSettings();
 
-    this._twitchIRC = new TwitchIRC();
+    this._twitchIRC = null;
     this._windowHandlerID = null;
     this._twitchHandlerID = null;
     this._unredirectHandlerID = null;
+    this._channelBinding = null;
   }
 
   enable() {
@@ -33,15 +34,18 @@ class Extension {
       }
     );
 
+    this._twitchIRC = new TwitchIRC();
     this._twitchHandlerID = this._twitchIRC.connect("connected", () => {
       this._twitchIRC.authenticate();
 
-      this._settings.bind(
+      this._channelBinding = this._settings.bind(
         "twitch-channel",
         this._twitchIRC,
         "channel",
         Gio.SettingsBindFlags.DEFAULT
       );
+
+      this._twitchIRC.channel = this._settings.get_string("twitch-channel");
     });
     this._twitchIRC.establishConnection();
 
@@ -190,6 +194,7 @@ class Extension {
     this._twitchIRC.close();
     this._unoverlayWindows();
     this._clearHandlers();
+    this._twitchIRC = null;
   }
 }
 
