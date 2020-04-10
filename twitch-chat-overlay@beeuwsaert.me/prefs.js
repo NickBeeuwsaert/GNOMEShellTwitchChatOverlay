@@ -61,8 +61,10 @@ function buildPrefsWidget() {
 
   const syncFormButtons = () => {
     const canSave = isFormValid();
+    const hasUnapplied = this.settings.get_has_unapplied();
 
-    applySettingsButton.set_sensitive(canSave);
+    applySettingsButton.set_sensitive(hasUnapplied && canSave);
+    revertSettingsButton.set_sensitive(hasUnapplied);
   };
   this.settings.connect("changed", syncFormButtons);
   this.settings.bind_property(
@@ -132,6 +134,7 @@ function buildPrefsWidget() {
 
   applySettingsButton.connect("clicked", () => {
     this.settings.apply();
+    syncFormButtons();
   });
   revertSettingsButton.connect("clicked", () => {
     this.settings.revert();
@@ -148,7 +151,6 @@ function buildPrefsWidget() {
     });
   });
   mainGrid.show_all();
-  syncFormButtons();
 
   return mainGrid;
 }

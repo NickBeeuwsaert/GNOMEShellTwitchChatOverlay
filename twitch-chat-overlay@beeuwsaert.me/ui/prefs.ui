@@ -16,6 +16,7 @@
       <object class="GtkButton" id="revert-settings">
         <property name="label">gtk-revert-to-saved</property>
         <property name="visible">True</property>
+        <property name="sensitive">False</property>
         <property name="can_focus">True</property>
         <property name="receives_default">True</property>
         <property name="valign">center</property>
@@ -33,7 +34,9 @@
       <object class="GtkButton" id="apply-settings">
         <property name="label">gtk-apply</property>
         <property name="visible">True</property>
+        <property name="sensitive">False</property>
         <property name="can_focus">True</property>
+        <property name="has_default">True</property>
         <property name="receives_default">True</property>
         <property name="valign">center</property>
         <property name="use_stock">True</property>
@@ -213,6 +216,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="valign">center</property>
+                <property name="activates_default">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
@@ -286,6 +290,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="valign">center</property>
+                <property name="activates_default">True</property>
               </object>
               <packing>
                 <property name="expand">False</property>
