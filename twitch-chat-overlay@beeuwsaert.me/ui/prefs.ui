@@ -7,6 +7,46 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
+  <object class="GtkHeaderBar" id="header-bar">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Twitch Overlay Settings</property>
+    <property name="show_close_button">True</property>
+    <child>
+      <object class="GtkButton" id="revert-settings">
+        <property name="label">gtk-revert-to-saved</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="valign">center</property>
+        <property name="use_stock">True</property>
+        <style>
+          <class name="destructive-action"/>
+          <class name="text-button"/>
+        </style>
+      </object>
+      <packing>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkButton" id="apply-settings">
+        <property name="label">gtk-apply</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">True</property>
+        <property name="valign">center</property>
+        <property name="use_stock">True</property>
+        <style>
+          <class name="suggested-action"/>
+          <class name="text-button"/>
+        </style>
+      </object>
+      <packing>
+        <property name="pack_type">end</property>
+      </packing>
+    </child>
+  </object>
   <object class="GtkAdjustment" id="scrollback-adjustment">
     <property name="lower">5</property>
     <property name="upper">100</property>

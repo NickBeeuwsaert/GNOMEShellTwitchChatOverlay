@@ -32,11 +32,21 @@ var TwitchIRC = class TwitchIRC {
         return;
       }
 
-      if (oldChannel) this.send(`PART #${oldChannel}`);
-      this.send(`JOIN #${newChannel}`);
+      if (oldChannel) this._part(oldChannel);
+      this._join(newChannel);
     }
 
     this._channel = newChannel;
+  }
+
+  _part(channel) {
+    this.send(`PART #${channel}`);
+    this.emit("leave-channel", channel);
+  }
+
+  _join(channel) {
+    this.send(`JOIN #${channel}`);
+    this.emit("join-channel", channel);
   }
 
   establishConnection() {
@@ -100,7 +110,7 @@ var TwitchIRC = class TwitchIRC {
     );
     this.send(`NICK ${username}`);
 
-    if (this.channel) this.send(`JOIN #${this.channel}`);
+    if (this.channel) this._join(this.channel);
 
     this._authenticated = true;
   }

@@ -27,10 +27,9 @@ var OverlayManager = class OverlayManager {
 
       this._channelHandlerID = this._settings.connect(
         "changed::twitch-channel",
-        () =>
-          (this._twitchIRC.channel = this._settings.get_string(
-            "twitch-channel"
-          ))
+        () => {
+          this._twitchIRC.channel = this._settings.get_string("twitch-channel");
+        }
       );
     });
     this._twitchIRC.establishConnection();
@@ -120,21 +119,38 @@ var OverlayManager = class OverlayManager {
       chat.connect("destroy", () => this._settings.disconnect(handlerID));
     }
 
-    const closeHandler = this._twitchIRC.connect("close", () =>
+    const closeHandlerID = this._twitchIRC.connect("close", () =>
       chat.addInfo("Twitch connection closed. Restart extension")
     );
-    const messageHandler = this._twitchIRC.connect("message", (_, message) => {
-      if (message.command === "PRIVMSG") {
-        const [channel, text] = message.params;
-        const tags = message.tags;
-        const displayName = tags["display-name"] || "UNKNOWN";
-        chat.addMessage(displayName, text);
+    const messageHandlerID = this._twitchIRC.connect(
+      "message",
+      (_, message) => {
+        if (message.command === "PRIVMSG") {
+          const [channel, text] = message.params;
+          const tags = message.tags;
+          const displayName = tags["display-name"] || "UNKNOWN";
+          chat.addMessage(displayName, text);
+        }
       }
-    });
+    );
+    const joinHandlerID = this._twitchIRC.connect(
+      "join-channel",
+      (_, channel) => {
+        chat.addInfo(`Joining #${channel}`);
+      }
+    );
+    const leaveHandlerID = this._twitchIRC.connect(
+      "leave-channel",
+      (_, channel) => {
+        chat.addInfo(`Leaving #${channel}`);
+      }
+    );
 
     chat.connect("destroy", () => {
-      this._twitchIRC.disconnect(closeHandler);
-      this._twitchIRC.disconnect(messageHandler);
+      this._twitchIRC.disconnect(closeHandlerID);
+      this._twitchIRC.disconnect(messageHandlerID);
+      this._twitchIRC.disconnect(joinHandlerID);
+      this._twitchIRC.disconnect(leaveHandlerID);
     });
 
     windowActor.add_child(chat);

@@ -65,8 +65,7 @@ var TwitchOverlayIndicator = GObject.registerClass(
     }
 
     _syncToggle() {
-      this._toggleAction.active = this.state !== IndicatorState.ERROR;
-
+      this._toggleAction.sensitive = this.state !== IndicatorState.ERROR;
       if (this.state === IndicatorState.ACTIVE) {
         this._toggleAction.label.text = "Disable Overlay";
       } else {

@@ -1,12 +1,12 @@
 "use strict";
 
 const Gio = imports.gi.Gio;
+const GObject = imports.gi.GObject;
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const { throttle } = Me.imports.throttle;
 
 function init() {}
 
@@ -15,34 +15,7 @@ function handleColorChange(settings, propertyName) {
     settings.set_string(propertyName, widget.get_rgba().to_string());
   };
 }
-const setErrorIfEmptyHandler = (widget) => {
-  const styleContext = widget.get_style_context();
-  const callback = () => {
-    if (widget.get_text() === "") {
-      styleContext.add_class("error");
-    } else {
-      styleContext.remove_class("error");
-    }
-  };
-  widget.connect("notify::text", callback);
-  callback();
-};
 
-const bindTimeout = (settings, setting, widget, timeout) => {
-  const callback = () => {
-    log("!!!");
-    settings.set_string(setting, widget.get_text());
-  };
-
-  widget.connect("notify::text", throttle(callback, timeout));
-  widget.connect("activate", callback);
-
-  settings.connect(`changed::${setting}`, () => {
-    widget.set_text(settings.get_string(setting));
-  });
-
-  widget.set_text(settings.get_string(setting));
-};
 function initColorWidget(widget, color) {
   const rgba = new Gdk.RGBA();
   rgba.parse(color);
@@ -50,29 +23,56 @@ function initColorWidget(widget, color) {
 }
 
 function buildPrefsWidget() {
-  let gschema = Gio.SettingsSchemaSource.new_from_directory(
-    Me.dir.get_child("schemas").get_path(),
-    Gio.SettingsSchemaSource.get_default(),
-    false
-  );
-
   // I don't know why I am assigning settings to this, but it was in
   // the documentation like this so I'm running with it
-  this.settings = new Gio.Settings({
-    settings_schema: gschema.lookup(
-      "org.gnome.shell.extensions.twitchoverlay",
-      true
-    ),
-  });
+  this.settings = ExtensionUtils.getSettings();
+  this.settings.delay();
+
   const builder = Gtk.Builder.new_from_file(
     Me.dir.get_child("ui/prefs.ui").get_path()
   );
+
   const chatTextColor = builder.get_object("chat-text-color");
   const chatBackgroundColor = builder.get_object("chat-background-color");
 
   const mainGrid = builder.get_object("main-grid");
+  const twitchChannelEntry = builder.get_object("twitch-channel");
+  const windowRegexEntry = builder.get_object("window-regex");
+  const headerBar = builder.get_object("header-bar");
+  const revertSettingsButton = builder.get_object("revert-settings");
+  const applySettingsButton = builder.get_object("apply-settings");
 
-  ["y-position", "x-position"].forEach((name) => {
+  const setErrorIfEmptyHandler = (widget) => {
+    const styleContext = widget.get_style_context();
+    const callback = () => {
+      if (widget.get_text() === "") {
+        styleContext.add_class("error");
+      } else {
+        styleContext.remove_class("error");
+      }
+    };
+    widget.connect("notify::text", callback);
+    callback();
+  };
+  const isFormValid = () =>
+    !(
+      twitchChannelEntry.get_text() === "" || windowRegexEntry.get_text() === ""
+    );
+
+  const syncFormButtons = () => {
+    const canSave = isFormValid();
+
+    applySettingsButton.set_sensitive(canSave);
+  };
+  this.settings.connect("changed", syncFormButtons);
+  this.settings.bind_property(
+    "has-unapplied",
+    revertSettingsButton,
+    "sensitive",
+    GObject.BindingFlags.DEFAULT | GObject.BindingFlags.SYNC_CREATE
+  );
+
+  for (const name of ["y-position", "x-position"]) {
     this.settings.bind(
       name,
       builder.get_object(`${name}-adjustment`),
@@ -83,7 +83,7 @@ function buildPrefsWidget() {
     builder
       .get_object(name)
       .connect("format-value", (_, value) => `${(value * 100).toFixed(0)}%`);
-  });
+  }
 
   this.settings.bind(
     "chat-width",
@@ -92,17 +92,13 @@ function buildPrefsWidget() {
     Gio.SettingsBindFlags.DEFAULT
   );
 
-  // Right now these fire too quicky, need to find a way to debounce them
-  const twitchChannelEntry = builder.get_object("twitch-channel");
-
-  twitchChannelEntry.set_text(this.settings.get_string("twitch-channel"));
-  setErrorIfEmptyHandler(twitchChannelEntry);
-  bindTimeout(this.settings, "twitch-channel", twitchChannelEntry, 5000);
-
-  const windowRegexEntry = builder.get_object("window-regex");
-
-  setErrorIfEmptyHandler(windowRegexEntry);
-  bindTimeout(this.settings, "window-regex", windowRegexEntry, 5000);
+  for (const [widget, setting] of [
+    [twitchChannelEntry, "twitch-channel"],
+    [windowRegexEntry, "window-regex"],
+  ]) {
+    setErrorIfEmptyHandler(widget);
+    this.settings.bind(setting, widget, "text", Gio.SettingsBindFlags.DEFAULT);
+  }
 
   this.settings.bind(
     "scrollback",
@@ -123,28 +119,36 @@ function buildPrefsWidget() {
     Gio.SettingsBindFlags.DEFAULT
   );
 
-  initColorWidget(chatTextColor, this.settings.get_string("chat-text-color"));
-  initColorWidget(
-    chatBackgroundColor,
-    this.settings.get_string("chat-background-color")
-  );
-  chatTextColor.connect(
-    "color-set",
-    handleColorChange(this.settings, "chat-text-color")
-  );
-  chatBackgroundColor.connect(
-    "color-set",
-    handleColorChange(this.settings, "chat-background-color")
-  );
+  for (const [widget, setting] of [
+    [chatBackgroundColor, "chat-background-color"],
+    [chatTextColor, "chat-text-color"],
+  ]) {
+    initColorWidget(widget, this.settings.get_string(setting));
+    widget.connect("color-set", handleColorChange(this.settings, setting));
+    this.settings.connect(`changed::${setting}`, () =>
+      initColorWidget(widget, this.settings.get_string(setting))
+    );
+  }
 
-  mainGrid.show_all();
+  applySettingsButton.connect("clicked", () => {
+    this.settings.apply();
+  });
+  revertSettingsButton.connect("clicked", () => {
+    this.settings.revert();
+  });
 
   mainGrid.connect("parent-set", () => {
-    mainGrid.parent.connect("destroy", () => {
-      this.settings.set_string("twitch-channel", twitchChannelEntry.text);
-      this.settings.set_string("window-regex", windowRegexEntry.text);
+    const topLevel = mainGrid.get_toplevel();
+
+    topLevel.set_titlebar(headerBar);
+    topLevel.connect("destroy", () => {
+      if (isFormValid()) {
+        this.settings.apply();
+      }
     });
   });
+  mainGrid.show_all();
+  syncFormButtons();
 
   return mainGrid;
 }
